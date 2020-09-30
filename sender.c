@@ -1,29 +1,29 @@
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 
-int main(int argc, char** argv)
-{
+#include "portOnFire.h"
+
+int main(int argc, char** argv) {
     // Check argument count
     if (argc != 2) {
-        fprintf(stderr, "Not enough arguments\n");
-        fprintf(stderr, "Usage: udp-on-fire-sender <Receiver IP>\n");
+        fprintf(stderr, "Wrong number of arguments\n");
+        fprintf(stderr, "Usage: %s <Receiver IP>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     // Temporary variable for general usage
     int tmp;
-    
+
     // Value to send
     int val = 0;
 
     // Creating socket
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd == -1)
-    {
+    if (fd == -1) {
         perror("Error while creating socket");
         return EXIT_FAILURE;
     }
@@ -34,9 +34,13 @@ int main(int argc, char** argv)
 
     // Setting the receiver ip address
     recv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+    if (recv_addr.sin_addr.s_addr == INADDR_NONE) {
+        fprintf(stderr, "Error: invalid IP address\n");
+        return EXIT_FAILURE;
+    }
 
     // Setting the receiver port
-    recv_addr.sin_port = htons(51069);
+    recv_addr.sin_port = htons(PORT_ON_FIRE);
 
     // Calculating length of server address data
     unsigned int recv_addr_len = sizeof(recv_addr);
@@ -44,8 +48,7 @@ int main(int argc, char** argv)
     // Sending string to receiver
     do {
         tmp = sendto(fd, &val, sizeof(val), 0, (struct sockaddr *) &recv_addr, recv_addr_len);
-        if (tmp == -1)
-        {
+        if (tmp == -1) {
             perror("Error while sending the data to the receiver");
         }
         val++;
@@ -53,8 +56,7 @@ int main(int argc, char** argv)
 
     // Closing the socket
     tmp = close(fd);
-    if (tmp == -1)
-    {
+    if (tmp == -1) {
         perror("Error while closing the socket");
     }
 

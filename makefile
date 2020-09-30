@@ -1,10 +1,12 @@
-all: server client
+all: receiver sender
 
-server: server.c
-	gcc -Wall -o server server.c
+receiver: receiver.c
+	gcc -Wall -Wextra -Wpedantic -O3 -o receiver receiver.c
 
-client: client.c
-	gcc -Wall -o client client.c
+sender: sender.c
+	gcc -Wall -Wextra -Wpedantic -O3 -o sender sender.c
 
 clean:
-	rm server client
+	rm receiver sender
+
+.PHONY: all clean

@@ -1,31 +1,34 @@
 #include <arpa/inet.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 
-#define FIRED_PORT 51069
+#include "portOnFire.h"
 
-enum ansi_color {
-    blue = 0,
-    cyan = 1,
-    green = 2,
-    magenta = 3,
-    red = 4,
-    yellow = 5
-};
+void sigintHandler(int signum);
 
-int main(int argc, char** argv) {
+int sigintHandled;
+
+int main(void) {
     int tmp;
+
+    // Initialize SIGINT handler
+    struct sigaction newSigactionSigint;
+    newSigactionSigint.sa_handler = &sigintHandler;
+    sigintHandled = 0;
+    tmp = sigaction(SIGINT, &newSigactionSigint, NULL);
+    if (tmp == -1) {
+        perror("Error while changing SIGINT action");
+        return EXIT_FAILURE;
+    }
 
     // Own address
     struct sockaddr_in srv_addr;
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    my_addr.sin_port = htons(FIRED_PORT);
+    srv_addr.sin_family = AF_INET;
+    srv_addr.sin_addr.s_addr = INADDR_ANY;
+    srv_addr.sin_port = htons(PORT_ON_FIRE);
 
     // Sender address
     struct sockaddr_in sender_addr;
@@ -34,7 +37,6 @@ int main(int argc, char** argv) {
     // Receive buffer
     int val;
     int next = 0;
-    int counter = 0;
 
     // Create socket
     int fd_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -44,10 +46,14 @@ int main(int argc, char** argv) {
     }
 
     // Bind socket
-    bind(fd_socket, (struct sockaddr *) &my_addr, sizeof(my_addr));
-    
+    tmp = bind(fd_socket, (struct sockaddr *) &srv_addr, sizeof(srv_addr));
+    if (tmp == -1) {
+        perror("Error while binding socket");
+        return EXIT_FAILURE;
+    }
+
     printf("Ready to burn\n");
-    
+
     do {
         // Receive message
         tmp = recvfrom(fd_socket, &val, sizeof(val), 0, (struct sockaddr*) &sender_addr, &sender_addr_len);
@@ -56,13 +62,12 @@ int main(int argc, char** argv) {
         }
 
         if (val != next) {
-            printf("%lld : %lld\n", next, val);
-            counter++;
+            printf("%d : %d\n", next, val);
         }
-        
+
         next = val + 1;
 
-    } while(val != -1);
+    } while(val != -1 && sigintHandled == 0);
 
     // Close socket
     tmp = close(fd_socket);
@@ -71,4 +76,14 @@ int main(int argc, char** argv) {
     }
 
     return EXIT_SUCCESS;
+}
+
+void sigintHandler(int signum) {
+    // Suppress unused parameter warning
+    (void) signum;
+
+    sigintHandled++;
+    if (sigintHandled > 1) {
+        exit(EXIT_FAILURE);
+    }
 }
